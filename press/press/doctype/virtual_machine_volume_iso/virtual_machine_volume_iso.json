@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "autoname": "field:volume_id",
+ "creation": "2024-11-14 15:57:32.871821",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "volume_id",
+  "volume_type",
+  "size",
+  "column_break_ygbk",
+  "iops",
+  "throughput",
+  "last_updated_at",
+  "section_break_frlu",
+  "device"
+ ],
+ "fields": [
+  {
+   "fieldname": "volume_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Volume ID",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "volume_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Volume Type",
+   "options": "gp3\ngp2",
+   "read_only_depends_on": "eval: doc.volume_type"
+  },
+  {
+   "fieldname": "size",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Size",
+   "read_only_depends_on": "eval: doc.size"
+  },
+  {
+   "fieldname": "column_break_ygbk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "iops",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "IOPS",
+   "read_only": 1
+  },
+  {
+   "fieldname": "throughput",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Throughput",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Last updated at",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_frlu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "device",
+   "fieldtype": "Data",
+   "label": "Device",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-11-14 15:57:42.285597",
+ "modified_by": "Administrator",
+ "module": "Press",
+ "name": "Virtual Machine Volume Iso",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
