@@ -84,7 +84,9 @@ class SiteDatabaseUser(Document):
 			pluck="max_connections",
 		)
 		total_used_connections = sum(exists_db_users_connection_limit)
-		allowed_max_connections_for_site = site.database_access_connection_limit - total_used_connections
+		allowed_max_connections_for_site = max(
+			0, site.database_access_connection_limit - total_used_connections
+		)
 		if self.max_connections > allowed_max_connections_for_site:
 			frappe.throw(
 				f"Your site has quota of {site.database_access_connection_limit} database connections.\nYou can't allocate more than {allowed_max_connections_for_site} connections for new user. You can drop other database users to allocate more connections."
