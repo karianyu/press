@@ -15,9 +15,9 @@
    "wildcard_filter": 0
   },
   {
-   "fieldname": "server_name",
+   "fieldname": "server",
    "fieldtype": "Data",
-   "label": "Server Name",
+   "label": "Server",
    "mandatory": 0,
    "options": "",
    "wildcard_filter": 0
@@ -49,7 +49,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2025-01-17 10:49:27.237566",
+ "modified": "2025-01-17 16:57:58.884625",
  "modified_by": "Administrator",
  "module": "Press",
  "name": "Agent Versions",
