@@ -6,6 +6,15 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_break_dkbf",
+  "team",
+  "cluster",
+  "exclude_self_hosted",
+  "column_break_fsfo",
+  "server_type",
+  "server",
+  "section_break_jwlq",
+  "servers",
   "section_break_qwua",
   "agent_repository_url",
   "agent_repository_branch",
@@ -65,12 +74,64 @@
   {
    "fieldname": "section_break_qwua",
    "fieldtype": "Section Break",
-   "hide_border": 1
+   "hide_border": 1,
+   "label": "Agent"
+  },
+  {
+   "fieldname": "section_break_jwlq",
+   "fieldtype": "Section Break",
+   "label": "Servers"
+  },
+  {
+   "fieldname": "servers",
+   "fieldtype": "Table",
+   "label": "Servers",
+   "options": "Agent Update Server"
+  },
+  {
+   "fieldname": "section_break_dkbf",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Team"
+  },
+  {
+   "fieldname": "cluster",
+   "fieldtype": "Link",
+   "label": "Cluster",
+   "options": "Cluster"
+  },
+  {
+   "default": "0",
+   "fieldname": "exclude_self_hosted",
+   "fieldtype": "Check",
+   "label": "Exclude Self Hosted",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_fsfo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "server_type",
+   "fieldtype": "Link",
+   "label": "Server Type",
+   "link_filters": "[[\"DocType\",\"name\",\"like\",\"%Server\"],[\"DocType\",\"istable\",\"=\",0]]",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "server",
+   "fieldtype": "Data",
+   "label": "Server"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-17 14:28:33.982455",
+ "modified": "2025-01-17 17:08:15.175099",
  "modified_by": "Administrator",
  "module": "Infrastructure",
  "name": "Agent Update",
