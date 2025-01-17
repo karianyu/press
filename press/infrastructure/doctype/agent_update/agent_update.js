@@ -8,5 +8,22 @@ frappe.ui.form.on("Agent Update", {
                 frm.set_df_property(field, "get_status", () => "Read");
             }
         });
+
+        [
+            [__('Start'), 'execute', frm.doc.status === 'Draft'],
+        ].forEach(([label, method, condition]) => {
+            if (condition) {
+                frm.add_custom_button(
+                    label,
+                    () => {
+                        frappe.confirm(
+                            `Are you sure you want to ${label.toLowerCase()}?`,
+                            () => frm.call(method).then(() => frm.refresh()),
+                        );
+                    },
+                    __('Actions'),
+                );
+            }
+        });
     },
 });

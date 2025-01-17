@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import time
+from enum import Enum
+
 import frappe
 import requests
 from frappe.model.document import Document
@@ -30,11 +33,15 @@ class AgentUpdate(Document):
 		commit_hash: DF.Data | None
 		commit_message: DF.Code | None
 		commit_timestamp: DF.Datetime | None
+		duration: DF.Duration | None
+		end: DF.Datetime | None
 		exclude_self_hosted: DF.Check
 		name: DF.Int | None
 		server: DF.Data | None
 		server_type: DF.Link | None
 		servers: DF.Table[AgentUpdateServer]
+		start: DF.Datetime | None
+		status: DF.Literal["Draft", "Pending", "Running", "Success", "Failure"]
 		team: DF.Link | None
 	# end: auto-generated types
 
@@ -71,7 +78,85 @@ class AgentUpdate(Document):
 	def set_servers(self):
 		filters = self.get_filters_dict()
 		for server in get_servers(filters):
-			self.append("servers", {"server_type": server.server_type, "server": server.name})
+			self.append(
+				"servers", {"server_type": server.server_type, "status": "Pending", "server": server.name}
+			)
+
+	def _execute_update(self, server) -> UpdateStatus:
+		return UpdateStatus.Success
+
+	@frappe.whitelist()
+	def execute_update(self, server_name):
+		server = self.get_server(server_name)
+
+		server.status = UpdateStatus.Running
+		try:
+			result = self._execute_update(server)
+			server.status = result.name
+			if result == UpdateStatus.Pending:
+				# Wait some time before the next run
+				time.sleep(1)
+		except Exception:
+			server.status = UpdateStatus.Failure
+
+		if server.status == UpdateStatus.Failure:
+			self.fail()
+		else:
+			self.next()
+
+	@frappe.whitelist()
+	def execute(self):
+		self.status = Status.Running
+		self.start = frappe.utils.now_datetime()
+		self.save()
+		self.next()
+
+	def fail(self) -> None:
+		self.status = Status.Failure
+		for server in self.servers:
+			if server.status == UpdateStatus.Pending:
+				server.status = UpdateStatus.Skipped
+		self.end = frappe.utils.now_datetime()
+		self.duration = (self.end - self.start).total_seconds()
+		self.save()
+
+	def succeed(self) -> None:
+		self.status = Status.Success
+		self.end = frappe.utils.now_datetime()
+		self.duration = (self.end - self.start).total_seconds()
+		self.save()
+
+	@frappe.whitelist()
+	def next(self) -> None:
+		self.status = Status.Running
+		self.save()
+		next_server = self.next_server
+
+		if not next_server:
+			# We've updated all servers
+			self.succeed()
+			return
+
+		frappe.enqueue_doc(
+			self.doctype,
+			self.name,
+			"execute_update",
+			server_name=next_server.server,
+			enqueue_after_commit=True,
+		)
+
+	@property
+	def next_server(self) -> AgentUpdateServer | None:
+		for server in self.servers:
+			if server.status == UpdateStatus.Pending:
+				return server
+		return None
+
+	def get_server(self, server_name) -> AgentUpdateServer | None:
+		for server in self.servers:
+			if server.server == server_name:
+				return server
+		return None
 
 
 class GitHubCommit:
@@ -95,3 +180,26 @@ class GitHubBranch:
 		self.url = f"https://api.github.com/repos/{owner}/{repository}/branches/{branch}"
 		data = requests.get(self.url).json()
 		self.commit = GitHubCommit(frappe._dict(data["commit"]))
+
+
+# TODO: Change (str, enum.Enum) to enum.StrEnum when migrating to Python 3.11
+class UpdateStatus(str, Enum):
+	Pending = "Pending"
+	Running = "Running"
+	Success = "Success"
+	Failure = "Failure"
+	Skipped = "Skipped"
+
+	def __str__(self):
+		return self.value
+
+
+class Status(str, Enum):
+	Draft = "Draft"
+	Pending = "Pending"
+	Running = "Running"
+	Success = "Success"
+	Failure = "Failure"
+
+	def __str__(self):
+		return self.value

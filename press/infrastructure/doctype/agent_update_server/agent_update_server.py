@@ -2,6 +2,8 @@
 # For license information, please see license.txt
 
 # import frappe
+from __future__ import annotations
+
 from frappe.model.document import Document
 
 
@@ -14,11 +16,14 @@ class AgentUpdateServer(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		play: DF.Link | None
 		server: DF.DynamicLink
 		server_type: DF.Link
+		status: DF.Literal["Pending", "Running", "Success", "Failure", "Skipped"]
 	# end: auto-generated types
 
 	pass
