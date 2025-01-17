@@ -298,12 +298,14 @@ class BaseServer(Document, TagHelpers):
 		if not self.agent_password:
 			self.agent_password = frappe.generate_hash(length=32)
 
-	def get_agent_repository_url(self):
+	@classmethod
+	def get_agent_repository_url(cls):
 		settings = frappe.get_single("Press Settings")
 		repository_owner = settings.agent_repository_owner or "frappe"
 		return f"https://github.com/{repository_owner}/agent"
 
-	def get_agent_repository_branch(self):
+	@classmethod
+	def get_agent_repository_branch(cls):
 		settings = frappe.get_single("Press Settings")
 		return settings.branch or "master"
 
@@ -1075,7 +1077,7 @@ class BaseServer(Document, TagHelpers):
 
 	def get_device_from_volume_id(self, volume_id):
 		stripped_id = volume_id.replace("-", "")
-		return f"/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_{ stripped_id }"
+		return f"/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_{stripped_id}"
 
 	def get_mount_variables(self):
 		return {

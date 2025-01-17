@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "autoincrement",
+ "creation": "2025-01-17 11:52:02.049496",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_qwua",
+  "agent_repository_url",
+  "agent_repository_branch",
+  "column_break_nklq",
+  "commit_hash",
+  "commit_author",
+  "commit_timestamp",
+  "section_break_hxwp",
+  "commit_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "agent_repository_branch",
+   "fieldtype": "Data",
+   "label": "Agent Repository Branch",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nklq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "commit_hash",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Commit Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commit_author",
+   "fieldtype": "Data",
+   "label": "Commit Author",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commit_message",
+   "fieldtype": "Code",
+   "label": "Commit Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commit_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Commit Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agent_repository_url",
+   "fieldtype": "Data",
+   "label": "Agent Repository URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_hxwp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_qwua",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-01-17 14:28:33.982455",
+ "modified_by": "Administrator",
+ "module": "Infrastructure",
+ "name": "Agent Update",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
