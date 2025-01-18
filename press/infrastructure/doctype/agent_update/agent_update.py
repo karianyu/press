@@ -47,7 +47,7 @@ class AgentUpdate(Document):
 		servers: DF.Table[AgentUpdateServer]
 		skipped: DF.Int
 		start: DF.Datetime | None
-		status: DF.Literal["Draft", "Pending", "Running", "Success", "Failure"]
+		status: DF.Literal["Draft", "Ready", "Running", "Success", "Failure"]
 		success: DF.Int
 		team: DF.Link | None
 		total: DF.Int
@@ -59,6 +59,9 @@ class AgentUpdate(Document):
 		self.set_agent_repository()
 		self.fetch_latest_commit()
 		self.set_servers()
+
+	def after_insert(self):
+		self.prepare()
 
 	def before_save(self):
 		self.update_statistics()
@@ -226,6 +229,57 @@ class AgentUpdate(Document):
 			self.set(status.lower(), counts[status])
 		self.total = sum(counts.values())
 
+	@frappe.whitelist()
+	def prepare(self):
+		frappe.enqueue_doc(
+			self.doctype,
+			self.name,
+			"_prepare",
+			enqueue_after_commit=True,
+			deduplicate=True,
+			job_id=f"prepare_agent_update:{self.name}",
+			queue="long",
+			timeout=3600,  # Fetching Agent versions can take a long time
+		)
+
+	def _prepare(self):
+		self.set_agent_versions()
+		self.skip_updates_with_known_issues()
+		self.status = Status.Ready
+		self.save()
+
+	def skip_updates_with_known_issues(self):
+		for server in self.servers:
+			if server.upstream and server.upstream != self.agent_repository_url:
+				server.mismatched_upstream = True
+			if server.commit_hash and server.commit_hash == self.commit_hash:
+				server.matched_commit_hash = True
+			if server.git_status:
+				server.has_uncommitted_files = True
+
+			if server.mismatched_upstream or server.matched_commit_hash or server.has_uncommitted_files:
+				server.status = UpdateStatus.Skipped
+
+	def set_agent_versions(self):
+		for server in self.servers:
+			if server.upstream:
+				# We already have the version information for this server
+				continue
+
+			version = frappe.get_cached_doc(server.server_type, server.server).get_agent_version()
+
+			if version:
+				# We use this to skip updates with known issues
+				server.upstream = version.get("upstream", "").strip()
+				server.commit_hash = version.get("commit", "").strip()
+				server.git_status = version.get("status", "").strip()
+
+				server.git_show = version.get("show")
+				server.python_version = version.get("python")
+
+				self.save(ignore_version=True)
+				frappe.db.commit()
+
 
 class GitHubCommit:
 	hash: str
@@ -264,7 +318,7 @@ class UpdateStatus(str, Enum):
 
 class Status(str, Enum):
 	Draft = "Draft"
-	Pending = "Pending"
+	Ready = "Ready"
 	Running = "Running"
 	Success = "Success"
 	Failure = "Failure"

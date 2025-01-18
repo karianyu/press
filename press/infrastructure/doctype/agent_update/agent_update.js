@@ -10,7 +10,8 @@ frappe.ui.form.on("Agent Update", {
         });
 
         [
-            [__('Start'), 'execute', frm.doc.status === 'Draft'],
+            [__('Prepare'), 'prepare', frm.doc.status === 'Draft'],
+            [__('Start'), 'execute', frm.doc.status === 'Ready'],
             [__('Stop'), 'stop', frm.doc.status === 'Running'],
         ].forEach(([label, method, condition]) => {
             if (condition) {
@@ -27,7 +28,7 @@ frappe.ui.form.on("Agent Update", {
             }
         });
 
-        if (frm.doc.status !== 'Draft' && frm.doc.total > 0) {
+        if (!["Draft", "Ready"].includes(frm.doc.status) && frm.doc.total > 0) {
             const progress_title = __('Agent Update Progress');
             let total = frm.doc.total;
             let progress = frm.doc.success + frm.doc.skipped + frm.doc.failure;
