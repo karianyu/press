@@ -79,25 +79,67 @@ class AgentUpdate(Document):
 		filters = self.get_filters_dict()
 		for server in get_servers(filters):
 			self.append(
-				"servers", {"server_type": server.server_type, "status": "Pending", "server": server.name}
+				"servers",
+				{"server_type": server.server_type, "status": UpdateStatus.Pending, "server": server.name},
 			)
 
+	def _create_play(self, server):
+		# Ansible Play will be created in the background. It might not be created immediately
+		# update_agent_ansible is deduplicated, so we can call it multiple times (iff we don't have a play)
+		frappe.get_doc(server.server_type, server.server).update_agent_ansible()
+
+	def _find_play(self, server):
+		plays = frappe.get_all(
+			"Ansible Play",
+			{"server": server.server, "play": "Update Agent", "creation": (">", self.creation)},
+			pluck="name",
+			order_by="creation desc",
+			limit=1,
+		)
+		if plays:
+			return plays[0]
+		return None
+
+	def _get_status_based_on_play(self, play):
+		play_status = frappe.db.get_value("Ansible Play", play, "status")
+		if play_status == "Pending":
+			play_status = "Running"
+		return UpdateStatus(play_status)
+
 	def _execute_update(self, server) -> UpdateStatus:
-		return UpdateStatus.Success
+		if server.status == UpdateStatus.Pending:
+			# Update hasn't started for this serer yet
+			# Create a play and return immediately (do not wait for the play).
+			# Look for it in the next run
+			self._create_play(server)
+			return UpdateStatus.Running
+
+		if server.status == UpdateStatus.Running:
+			if not server.play:
+				# Look for the play we created in the previous run
+				server.play = self._find_play(server)
+
+			if server.play:
+				# Play is created. Check status
+				return self._get_status_based_on_play(server.play)
+
+			# Play isn't created yet. Try again in the next run
+			return UpdateStatus.Running
+
+		# Nothing to do for Success or Failure
+		return UpdateStatus(server.status)
 
 	@frappe.whitelist()
 	def execute_update(self, server_name):
 		server = self.get_server(server_name)
-
-		server.status = UpdateStatus.Running
 		try:
-			result = self._execute_update(server)
-			server.status = result.name
-			if result == UpdateStatus.Pending:
-				# Wait some time before the next run
-				time.sleep(1)
+			server.status = self._execute_update(server)
 		except Exception:
 			server.status = UpdateStatus.Failure
+
+		if server.status in (UpdateStatus.Pending, UpdateStatus.Running):
+			# Wait some time before the next run
+			time.sleep(1)
 
 		if server.status == UpdateStatus.Failure:
 			self.fail()
@@ -148,7 +190,7 @@ class AgentUpdate(Document):
 	@property
 	def next_server(self) -> AgentUpdateServer | None:
 		for server in self.servers:
-			if server.status == UpdateStatus.Pending:
+			if server.status in (UpdateStatus.Pending, UpdateStatus.Running):
 				return server
 		return None
 

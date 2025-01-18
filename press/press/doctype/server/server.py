@@ -428,7 +428,13 @@ class BaseServer(Document, TagHelpers):
 
 	@frappe.whitelist()
 	def update_agent_ansible(self):
-		frappe.enqueue_doc(self.doctype, self.name, "_update_agent_ansible")
+		frappe.enqueue_doc(
+			self.doctype,
+			self.name,
+			"_update_agent_ansible",
+			deduplicate=True,
+			job_id=f"update_agent:{self.name}",
+		)
 
 	def _update_agent_ansible(self):
 		try:
