@@ -153,19 +153,25 @@ class AgentUpdate(Document):
 		self.save()
 		self.next()
 
+	@frappe.whitelist()
+	def stop(self):
+		self.fail()
+
 	def fail(self) -> None:
 		self.status = Status.Failure
 		for server in self.servers:
 			if server.status == UpdateStatus.Pending:
 				server.status = UpdateStatus.Skipped
 		self.end = frappe.utils.now_datetime()
-		self.duration = (self.end - self.start).total_seconds()
+		start = frappe.utils.get_datetime(self.start)
+		self.duration = (self.end - start).total_seconds()
 		self.save()
 
 	def succeed(self) -> None:
 		self.status = Status.Success
 		self.end = frappe.utils.now_datetime()
-		self.duration = (self.end - self.start).total_seconds()
+		start = frappe.utils.get_datetime(self.start)
+		self.duration = (self.end - start).total_seconds()
 		self.save()
 
 	@frappe.whitelist()

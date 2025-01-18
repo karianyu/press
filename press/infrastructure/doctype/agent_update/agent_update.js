@@ -11,6 +11,7 @@ frappe.ui.form.on("Agent Update", {
 
         [
             [__('Start'), 'execute', frm.doc.status === 'Draft'],
+            [__('Stop'), 'stop', frm.doc.status === 'Running'],
         ].forEach(([label, method, condition]) => {
             if (condition) {
                 frm.add_custom_button(
