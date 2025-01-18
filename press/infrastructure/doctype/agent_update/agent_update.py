@@ -38,6 +38,7 @@ class AgentUpdate(Document):
 		end: DF.Datetime | None
 		exclude_self_hosted: DF.Check
 		failure: DF.Int
+		ignore_failures: DF.Check
 		name: DF.Int | None
 		pending: DF.Int
 		running: DF.Int
@@ -151,7 +152,8 @@ class AgentUpdate(Document):
 			# Wait some time before the next run
 			time.sleep(1)
 
-		if server.status == UpdateStatus.Failure:
+		if (server.status == UpdateStatus.Failure) and (not self.ignore_failures):
+			# Stop the update iff we're not ignoring failures
 			self.fail()
 		else:
 			self.next()

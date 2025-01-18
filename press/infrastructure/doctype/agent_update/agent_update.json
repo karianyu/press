@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "status",
+  "ignore_failures",
   "column_break_upab",
   "start",
   "end",
@@ -223,11 +224,17 @@
    "fieldtype": "Int",
    "label": "Failure",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "ignore_failures",
+   "fieldtype": "Check",
+   "label": "Ignore Failures"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-18 15:51:51.967925",
+ "modified": "2025-01-18 15:57:04.067492",
  "modified_by": "Administrator",
  "module": "Infrastructure",
  "name": "Agent Update",
