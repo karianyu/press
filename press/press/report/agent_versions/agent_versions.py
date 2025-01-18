@@ -5,7 +5,6 @@ import json
 
 import frappe
 
-from press.agent import Agent
 from press.press.report.server_stats.server_stats import get_servers
 
 
@@ -65,12 +64,7 @@ def execute(filters=None):
 def get_data(filters):
 	rows = []
 	for server in get_servers(filters):
-		try:
-			version = Agent(server.name, server.server_type).get_version()
-			if version is None:
-				version = {}
-		except Exception:
-			version = {}
+		version = frappe.get_cached_doc(server.server_type, server.name).get_agent_version()
 		rows.append(
 			{
 				"server": server.name,

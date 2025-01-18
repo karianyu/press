@@ -1292,6 +1292,15 @@ node_filesystem_avail_bytes{{instance="{self.name}", mountpoint="{mountpoint}"}}
 		frappe.throw(f"Failed to fetch {primary.name}'s Frappe public key")
 		return None
 
+	def get_agent_version(self) -> dict:
+		try:
+			version = Agent(self.name, self.doctype).get_version()
+			if version is None:
+				version = {}
+		except Exception:
+			version = {}
+		return version
+
 
 class Server(BaseServer):
 	# begin: auto-generated types
