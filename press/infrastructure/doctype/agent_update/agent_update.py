@@ -177,6 +177,8 @@ class AgentUpdate(Document):
 		for server in self.servers:
 			if server.status == UpdateStatus.Pending:
 				server.status = UpdateStatus.Skipped
+			if server.status == UpdateStatus.Running:
+				server.status = UpdateStatus.Failure
 		self.end = frappe.utils.now_datetime()
 		start = frappe.utils.get_datetime(self.start)
 		self.duration = (self.end - start).total_seconds()
@@ -325,3 +327,9 @@ class Status(str, Enum):
 
 	def __str__(self):
 		return self.value
+
+
+@frappe.whitelist()
+def stop(name):
+	frappe.only_for("System Manager")
+	frappe.get_doc("Agent Update", name).stop()

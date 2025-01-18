@@ -12,7 +12,7 @@ frappe.ui.form.on("Agent Update", {
         [
             [__('Prepare'), 'prepare', frm.doc.status === 'Draft'],
             [__('Start'), 'execute', frm.doc.status === 'Ready'],
-            [__('Stop'), 'stop', frm.doc.status === 'Running'],
+            [__('Stop'), 'press.infrastructure.doctype.agent_update.agent_update.stop', frm.doc.status === 'Running'],
         ].forEach(([label, method, condition]) => {
             if (condition) {
                 frm.add_custom_button(
@@ -20,7 +20,13 @@ frappe.ui.form.on("Agent Update", {
                     () => {
                         frappe.confirm(
                             `Are you sure you want to ${label.toLowerCase()}?`,
-                            () => frm.call(method).then(() => frm.refresh()),
+                            () => {
+                                if (method.includes(".")) {
+                                    frappe.xcall(method, { name: frm.doc.name }).then(() => frm.refresh());
+                                } else {
+                                    frm.call(method).then(() => frm.refresh());
+                                }
+                            },
                         );
                     },
                     __('Actions'),
