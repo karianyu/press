@@ -26,5 +26,16 @@ frappe.ui.form.on("Agent Update", {
                 );
             }
         });
+
+        if (frm.doc.status !== 'Draft' && frm.doc.total > 0) {
+            const progress_title = __('Agent Update Progress');
+            let total = frm.doc.total;
+            let progress = frm.doc.success + frm.doc.skipped + frm.doc.failure;
+            frm.dashboard.show_progress(
+                progress_title,
+                (progress / total) * 100,
+                `Agent Update Progress (${progress} servers completed out of ${total})`,
+            );
+        }
     },
 });

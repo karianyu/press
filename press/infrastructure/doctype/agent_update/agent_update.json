@@ -20,6 +20,15 @@
   "server",
   "section_break_jwlq",
   "servers",
+  "statistics_section",
+  "total",
+  "pending",
+  "column_break_zvlr",
+  "running",
+  "skipped",
+  "column_break_swap",
+  "success",
+  "failure",
   "section_break_qwua",
   "agent_repository_url",
   "agent_repository_branch",
@@ -164,11 +173,61 @@
    "fieldtype": "Duration",
    "label": "Duration",
    "read_only": 1
+  },
+  {
+   "fieldname": "statistics_section",
+   "fieldtype": "Section Break",
+   "label": "Statistics"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending",
+   "fieldtype": "Int",
+   "label": "Pending",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_zvlr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "running",
+   "fieldtype": "Int",
+   "label": "Running",
+   "read_only": 1
+  },
+  {
+   "fieldname": "skipped",
+   "fieldtype": "Int",
+   "label": "Skipped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_swap",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "success",
+   "fieldtype": "Int",
+   "label": "Success",
+   "read_only": 1
+  },
+  {
+   "fieldname": "failure",
+   "fieldtype": "Int",
+   "label": "Failure",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-17 21:10:13.876703",
+ "modified": "2025-01-18 15:51:51.967925",
  "modified_by": "Administrator",
  "module": "Infrastructure",
  "name": "Agent Update",

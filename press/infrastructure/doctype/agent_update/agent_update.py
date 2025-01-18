@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import time
+from collections import defaultdict
 from enum import Enum
 
 import frappe
@@ -36,13 +37,19 @@ class AgentUpdate(Document):
 		duration: DF.Duration | None
 		end: DF.Datetime | None
 		exclude_self_hosted: DF.Check
+		failure: DF.Int
 		name: DF.Int | None
+		pending: DF.Int
+		running: DF.Int
 		server: DF.Data | None
 		server_type: DF.Link | None
 		servers: DF.Table[AgentUpdateServer]
+		skipped: DF.Int
 		start: DF.Datetime | None
 		status: DF.Literal["Draft", "Pending", "Running", "Success", "Failure"]
+		success: DF.Int
 		team: DF.Link | None
+		total: DF.Int
 	# end: auto-generated types
 
 	pass
@@ -51,6 +58,9 @@ class AgentUpdate(Document):
 		self.set_agent_repository()
 		self.fetch_latest_commit()
 		self.set_servers()
+
+	def before_save(self):
+		self.update_statistics()
 
 	def set_agent_repository(self):
 		self.agent_repository_url = BaseServer.get_agent_repository_url().removesuffix(".git")
@@ -205,6 +215,14 @@ class AgentUpdate(Document):
 			if server.server == server_name:
 				return server
 		return None
+
+	def update_statistics(self):
+		counts = defaultdict(int)
+		for server in self.servers:
+			counts[server.status] = counts.get(server.status, 0) + 1
+		for status in UpdateStatus:
+			self.set(status.lower(), counts[status])
+		self.total = sum(counts.values())
 
 
 class GitHubCommit:
