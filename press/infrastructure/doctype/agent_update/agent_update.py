@@ -145,6 +145,7 @@ class AgentUpdate(Document):
 
 	@frappe.whitelist()
 	def execute_update(self, server_name):
+		ignore_version_while_saving = False
 		server = self.get_server(server_name)
 		try:
 			server.status = self._execute_update(server)
@@ -152,6 +153,7 @@ class AgentUpdate(Document):
 			server.status = UpdateStatus.Failure
 
 		if server.status in (UpdateStatus.Pending, UpdateStatus.Running):
+			ignore_version_while_saving = True
 			# Wait some time before the next run
 			time.sleep(1)
 
@@ -159,7 +161,7 @@ class AgentUpdate(Document):
 			# Stop the update iff we're not ignoring failures
 			self.fail()
 		else:
-			self.next()
+			self.next(ignore_version_while_saving)
 
 	@frappe.whitelist()
 	def execute(self):
@@ -192,9 +194,9 @@ class AgentUpdate(Document):
 		self.save()
 
 	@frappe.whitelist()
-	def next(self) -> None:
+	def next(self, ignore_version=False) -> None:
 		self.status = Status.Running
-		self.save()
+		self.save(ignore_version=ignore_version)
 		next_server = self.next_server
 
 		if not next_server:
