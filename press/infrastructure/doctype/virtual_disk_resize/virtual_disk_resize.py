@@ -53,6 +53,7 @@ class VirtualDiskResize(Document):
 		old_volume_size: DF.Int
 		old_volume_status: DF.Literal["Attached", "Deleted"]
 		old_volume_throughput: DF.Int
+		service: DF.Data | None
 		start: DF.Datetime | None
 		status: DF.Literal["Pending", "Running", "Success", "Failure"]
 		steps: DF.Table[VirtualMachineMigrationStep]
@@ -226,6 +227,12 @@ class VirtualDiskResize(Document):
 		self.old_filesystem_size = filesystem["size"]
 		self.old_filesystem_used = filesystem["used"]
 
+		SERVICES = {
+			"/opt/volumes/benches": "docker",
+			"/opt/volumes/mariadb": "mariadb",
+		}
+		self.service = SERVICES.get(self.filesystem_mount_point)
+
 	def set_old_volume_id(self):
 		machine = self.machine
 		root_volume = machine.get_root_volume()
@@ -250,6 +257,7 @@ class VirtualDiskResize(Document):
 		# New volume should be roughly 85% full after copying files
 		new_size = int(self.old_filesystem_used * 100 / 85)
 		self.new_filesystem_size = max(new_size, 10)  # Minimum 10 GB
+		# self.new_filesystem_size = max(new_size, 15)  # TODO: Remove this line after testing
 		self.new_volume_size = self.new_filesystem_size
 		self.new_volume_iops, self.new_volume_throughput = self.get_optimal_performance_attributes()
 
@@ -319,6 +327,114 @@ class VirtualDiskResize(Document):
 		self.ansible_run(f"mount {device} {self.new_filesystem_temporary_mount_point}")
 		return StepStatus.Success
 
+	def stop_service(self) -> StepStatus:
+		"Stop service"
+		if self.service:
+			self.ansible_run(f"systemctl stop {self.service}")
+		# Filebeat keeps the file open and prevents unmounting
+		self.ansible_run("systemctl stop filebeat")
+		return StepStatus.Success
+
+	def unmount_bind_mounts(self) -> StepStatus:
+		"Unmount bind mounts"
+		output = self.ansible_run(
+			f"findmnt --json --source {self.old_filesystem_device} --output target,source"
+		)["output"]
+		mounts = json.loads(output)["filesystems"]
+		for mount in mounts:
+			if "[/" not in mount["source"]:
+				continue
+			self.ansible_run(f"umount {mount['target']}")
+		return StepStatus.Success
+
+	def snapshot_machine(self) -> StepStatus:
+		"Snapshot machine"
+		machine = self.machine
+		machine.create_snapshots()
+
+		if len(machine.flags.created_snapshots) == 0:
+			frappe.throw("Failed to create a snapshot")
+
+		# self.machine_snapshot = machine.flags.created_snapshots[0]
+		return StepStatus.Success
+
+	def start_copy(self) -> StepStatus:
+		"Start copying files"
+		server = self.machine.get_server()
+		server.copy_files(
+			source=self.filesystem_mount_point,
+			destination=self.new_filesystem_temporary_mount_point,
+		)
+		return StepStatus.Success
+
+	def wait_for_copy(self) -> StepStatus:
+		"Wait for files to be copied"
+		plays = frappe.get_all(
+			"Ansible Play",
+			{
+				"server": self.machine.get_server().name,
+				"play": "Copy Files",
+				"creation": (">", self.creation),
+			},
+			["status"],
+			order_by="creation desc",
+			limit=1,
+		)
+		if not plays:
+			return StepStatus.Running
+
+		play_status = plays[0].status
+		if play_status == "Success":
+			return StepStatus.Success
+		if play_status in ("Failure", "Unreachable"):
+			return StepStatus.Failure
+
+		return StepStatus.Running
+
+	def unmount_old_volume(self) -> StepStatus:
+		"Unmount old volume"
+		self.ansible_run(f"umount {self.filesystem_mount_point}")
+		return StepStatus.Success
+
+	def unmount_new_volume(self) -> StepStatus:
+		"Unmount new volume"
+		self.ansible_run(f"umount {self.new_filesystem_temporary_mount_point}")
+		return StepStatus.Success
+
+	def update_mount(self) -> StepStatus:
+		"Mount new volume on old mount point"
+		# Mount the new volume using the new UUID
+		# Update fstab
+		# 	1. Find mount matching the old UUID in fstab
+		# 	2. Update UUID for this mountpoint
+		# Reference: https://stackoverflow.com/questions/16637799/sed-error-invalid-reference-1-on-s-commands-rhs#comment88576787_16637847
+		self.ansible_run(
+			f"sed -Ei 's/^UUID\\={self.old_filesystem_uuid}\\s(.*$)/UUID\\={self.new_filesystem_uuid} \\1/g' /etc/fstab"
+		)
+		self.ansible_run("systemctl daemon-reload")
+		return StepStatus.Success
+
+	def start_service(self) -> StepStatus:
+		"Start service"
+		if self.service:
+			self.ansible_run(f"systemctl start {self.service}")
+
+		# We had stopped filebeat, start it again
+		self.ansible_run("systemctl start filebeat")
+		return StepStatus.Success
+
+	def reduce_performance_of_new_volume(self) -> StepStatus:
+		"Reduce performance of new volume"
+		self.machine.update_ebs_performance(
+			self.new_volume_id, self.old_volume_iops, self.old_volume_throughput
+		)
+		return StepStatus.Success
+
+	def delete_old_volume(self) -> StepStatus:
+		"Delete old volume"
+		self.machine.delete_volume(self.old_volume_id)
+		return StepStatus.Success
+
 	@property
 	def machine(self):
 		return frappe.get_doc("Virtual Machine", self.virtual_machine)
@@ -335,6 +451,17 @@ class VirtualDiskResize(Document):
 			(self.wait_for_increased_performance, Wait),
 			(self.format_new_volume, NoWait),
 			(self.mount_new_volume, NoWait),
+			(self.stop_service, NoWait),
+			(self.unmount_bind_mounts, NoWait),
+			(self.snapshot_machine, NoWait),
+			(self.start_copy, NoWait),
+			(self.wait_for_copy, Wait),
+			(self.unmount_old_volume, NoWait),
+			(self.unmount_new_volume, NoWait),
+			(self.update_mount, NoWait),
+			(self.start_service, NoWait),
+			(self.reduce_performance_of_new_volume, NoWait),
+			(self.delete_old_volume, NoWait),
 		]
 
 		steps = []
@@ -405,6 +532,7 @@ class VirtualDiskResize(Document):
 			if step.status in (StepStatus.Pending, StepStatus.Running):
 				step.status = StepStatus.Failure
 		self.status = Status.Failure
+		self.save()
 
 	@property
 	def next_step(self) -> VirtualMachineMigrationStep | None:

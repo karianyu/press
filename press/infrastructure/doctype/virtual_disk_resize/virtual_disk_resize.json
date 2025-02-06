@@ -27,6 +27,7 @@
   "filesystems_section",
   "filesystem_mount_point",
   "filesystem_type",
+  "service",
   "column_break_npqx",
   "old_filesystem_uuid",
   "old_filesystem_device",
@@ -251,11 +252,17 @@
    "fieldtype": "Data",
    "label": "New Filesystem Temporary Mount Point",
    "read_only": 1
+  },
+  {
+   "fieldname": "service",
+   "fieldtype": "Data",
+   "label": "Service",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-06 09:26:04.199036",
+ "modified": "2025-02-06 12:40:39.087997",
  "modified_by": "Administrator",
  "module": "Infrastructure",
  "name": "Virtual Disk Resize",
