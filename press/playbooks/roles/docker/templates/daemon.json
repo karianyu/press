@@ -3,6 +3,7 @@
     "icc": false,
     "iptables": true,
     "live-restore": true,
+    "insecure-registries": ["10.10.1.122:5000"],
     "metrics-addr": "127.0.0.1:9323",
     "no-new-privileges": true,
     "userland-proxy": false,
