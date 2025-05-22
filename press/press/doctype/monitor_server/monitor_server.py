@@ -57,8 +57,6 @@ class MonitorServer(BaseServer):
 		prometheus_username: DF.Data | None
 		provider: DF.Literal["Generic", "Scaleway", "AWS EC2", "OCI"]
 		root_public_key: DF.Code | None
-		ssh_port: DF.Int
-		ssh_user: DF.Data | None
 		status: DF.Literal["Pending", "Installing", "Active", "Broken", "Archived"]
 		virtual_machine: DF.Link | None
 	# end: auto-generated types
@@ -122,12 +120,12 @@ class MonitorServer(BaseServer):
 			ansible = Ansible(
 				playbook="monitor.yml",
 				server=self,
-				user=self._ssh_user(),
-				port=self._ssh_port(),
+				user="vagrant",
 				variables={
 					"server": self.name,
 					"workers": 1,
 					"domain": self.domain,
+					"ansible_ssh_pass":'vagrant',
 					"agent_password": agent_password,
 					"agent_repository_url": agent_repository_url,
 					"monitor": True,
@@ -204,8 +202,6 @@ class MonitorServer(BaseServer):
 			ansible = Ansible(
 				playbook="reconfigure_monitoring.yml",
 				server=self,
-				user=self._ssh_user(),
-				port=self._ssh_port(),
 				variables={
 					"server": self.name,
 					"monitoring_password": monitoring_password,
@@ -258,17 +254,3 @@ class MonitorServer(BaseServer):
 		for alert in self.sites_down_alerts:
 			sites.append(alert["labels"]["instance"])
 		return sites
-
-	def get_sites_down_for_server(self, server: str) -> list[str]:
-		sites = []
-		for alert in self.sites_down_alerts:
-			if alert["labels"]["server"] == server:
-				sites.append(alert["labels"]["instance"])
-		return sites
-
-	@property
-	def benches_down(self):
-		benches = []
-		for alert in self.sites_down_alerts:
-			benches.append(alert["labels"]["bench"])
-		return benches

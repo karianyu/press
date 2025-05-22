@@ -35,8 +35,6 @@ class RegistryServer(BaseServer):
 		registry_password: DF.Password | None
 		registry_username: DF.Data | None
 		root_public_key: DF.Code | None
-		ssh_port: DF.Int
-		ssh_user: DF.Data | None
 		status: DF.Literal["Pending", "Installing", "Active", "Broken", "Archived"]
 		virtual_machine: DF.Link | None
 	# end: auto-generated types
@@ -71,12 +69,12 @@ class RegistryServer(BaseServer):
 			ansible = Ansible(
 				playbook="registry.yml",
 				server=self,
-				user=self._ssh_user(),
-				port=self._ssh_port(),
+				user="vagrant",
 				variables={
 					"server": self.name,
 					"workers": 1,
 					"domain": self.domain,
+					"ansible_ssh_pass":"vagrant",
 					"agent_password": agent_password,
 					"agent_repository_url": agent_repository_url,
 					"monitoring_password": monitoring_password,
@@ -106,8 +104,6 @@ class RegistryServer(BaseServer):
 			ansible = Ansible(
 				playbook="docker_registry_prune.yml",
 				server=self,
-				user=self._ssh_user(),
-				port=self._ssh_port(),
 			)
 			ansible.run()
 		except Exception:

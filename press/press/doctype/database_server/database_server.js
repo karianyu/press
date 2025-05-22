@@ -35,7 +35,7 @@ frappe.ui.form.on('Database Server', {
 				'fetch_keys',
 				true,
 				frm.doc.is_server_setup &&
-					(!frm.doc.frappe_public_key || !frm.doc.root_public_key),
+				(!frm.doc.frappe_public_key || !frm.doc.root_public_key),
 			],
 			[
 				__('Prepare Server'),
@@ -49,8 +49,8 @@ frappe.ui.form.on('Database Server', {
 				'rename_server',
 				true,
 				frm.doc.is_server_setup &&
-					frm.doc.is_server_prepared &&
-					!frm.doc.is_server_renamed,
+				frm.doc.is_server_prepared &&
+				!frm.doc.is_server_renamed,
 			],
 			[
 				__('Convert From Frappe Server'),
@@ -63,16 +63,16 @@ frappe.ui.form.on('Database Server', {
 				'setup_replication',
 				true,
 				frm.doc.is_server_setup &&
-					!frm.doc.is_primary &&
-					!frm.doc.is_replication_setup,
+				!frm.doc.is_primary &&
+				!frm.doc.is_replication_setup,
 			],
 			[
 				__('Trigger Failover'),
 				'trigger_failover',
 				true,
 				frm.doc.is_server_setup &&
-					!frm.doc.is_primary &&
-					frm.doc.is_replication_setup,
+				!frm.doc.is_primary &&
+				frm.doc.is_replication_setup,
 			],
 			[
 				__('Reset Root Password'),
@@ -137,7 +137,7 @@ frappe.ui.form.on('Database Server', {
 				'fetch_keys',
 				false,
 				frm.doc.is_server_setup &&
-					(!frm.doc.frappe_public_key || !frm.doc.root_public_key),
+				(!frm.doc.frappe_public_key || !frm.doc.root_public_key),
 			],
 			[__('Update TLS Certificate'), 'update_tls_certificate', true],
 			[
@@ -166,13 +166,6 @@ frappe.ui.form.on('Database Server', {
 				true,
 				frm.doc.virtual_machine && frm.doc.mounts,
 			],
-			[
-				'Get Binlog Summary',
-				'get_binlog_summary',
-				true,
-				frm.doc.is_server_setup,
-			],
-			['Sync Binlogs Info', 'sync_binlogs_info', true, frm.doc.is_server_setup],
 		].forEach(([label, method, confirm, condition]) => {
 			if (typeof condition === 'undefined' || condition) {
 				frm.add_custom_button(
@@ -257,7 +250,7 @@ frappe.ui.form.on('Database Server', {
 					dialog.show();
 				},
 				__('Actions'),
-			);
+			);	
 			frm.add_custom_button(
 				__('Update Memory Allocator'),
 				() => {
@@ -292,38 +285,6 @@ frappe.ui.form.on('Database Server', {
 				},
 				__('Dangerous Actions'),
 			);
-
-			frm.add_custom_button(
-				__('Purge Binlogs'),
-				() => {
-					const dialog = new frappe.ui.Dialog({
-						title: __('Purge Binlogs'),
-						fields: [
-							{
-								fieldtype: 'Data',
-								label: __('To Binlog (mysql-bin.xxxxxx)'),
-								fieldname: 'to_binlog',
-								reqd: 1,
-							},
-						],
-					});
-
-					dialog.set_primary_action(__('Purge'), (args) => {
-						frm.call({
-							method: 'purge_binlogs',
-							doc: frm.doc,
-							args: args,
-							freeze: true,
-							callback: () => {
-								dialog.hide();
-								frm.refresh();
-							},
-						});
-					});
-					dialog.show();
-				},
-				__('Dangerous Actions'),
-			);
 		}
 	},
 
@@ -331,3 +292,5 @@ frappe.ui.form.on('Database Server', {
 		press.set_hostname_abbreviation(frm);
 	},
 });
+
+

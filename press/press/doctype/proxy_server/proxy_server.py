@@ -147,10 +147,11 @@ class ProxyServer(BaseServer):
 			ansible = Ansible(
 				playbook="self_hosted_proxy.yml" if getattr(self, "is_self_hosted", False) else "proxy.yml",
 				server=self,
-				user=self.ssh_user or "root",
+				user=self.ssh_user or "vagrant",
 				port=self.ssh_port or 22,
 				variables={
 					"server": self.name,
+					"ansible_ssh_pass":'vagrant',
 					"workers": 1,
 					"domain": self.domain,
 					"agent_password": agent_password,
@@ -569,3 +570,5 @@ def process_update_nginx_job_update(job):
 	elif job.status in ["Pending", "Running"]:
 		proxy_server.status = "Installing"
 	proxy_server.save()
+
+

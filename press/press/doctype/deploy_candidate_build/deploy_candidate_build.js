@@ -11,7 +11,7 @@ frappe.ui.form.on('Deploy Candidate Build', {
 				__('Cleanup Directory'),
 				'cleanup_build_directory',
 				typeof frm.doc.build_directory !== 'undefined' &&
-					frm.doc.status !== 'Running',
+				frm.doc.status !== 'Running',
 				{},
 				'Build',
 			],
@@ -30,14 +30,6 @@ frappe.ui.form.on('Deploy Candidate Build', {
 				{},
 				'Build',
 			],
-			[
-				__('Create ARM Build'),
-				'create_arm_build',
-				(frm.doc.status === 'Success') & (frm.doc.platform !== 'arm64'),
-				{},
-				'Build',
-			],
-
 			[__('Deploy'), 'deploy', frm.doc.status === 'Success', {}, 'Deploy'],
 
 			[
@@ -106,15 +98,6 @@ frappe.ui.form.on('Deploy Candidate Build', {
 									indicator: 'green',
 									message: __(`Duplicate {0} created and redeploy triggered.`, [
 										`<a href="/app/deploy-candidate/${message}">Deploy Candidate</a>`,
-									]),
-								});
-							} else if (method === 'create_arm_build') {
-								// TODO: Fix the message later!
-								frappe.msgprint({
-									title: 'ARM Build Triggered',
-									indicator: 'green',
-									message: __(`Created a new {0}`, [
-										`<a href="/app/deploy-candidate-build/${r.message}">Deploy Candidate Build</a>`,
 									]),
 								});
 							}

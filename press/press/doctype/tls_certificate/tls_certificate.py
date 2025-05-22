@@ -13,7 +13,6 @@ from datetime import datetime
 import frappe
 import OpenSSL
 from frappe.model.document import Document
-from frappe.query_builder.functions import Date
 
 from press.api.site import check_dns_cname_a
 from press.exceptions import (
@@ -62,16 +61,6 @@ class TLSCertificate(Document):
 	def after_insert(self):
 		self.obtain_certificate()
 
-	def validate(self):
-		if self.provider == "Other":
-			if not self.team:
-				frappe.throw("Team is mandatory for custom TLS certificates.")
-
-			self.configure_full_chain()
-			self.validate_key_length()
-			self.validate_key_certificate_association()
-			self._extract_certificate_details()
-
 	def on_update(self):
 		if self.is_new():
 			return
@@ -79,11 +68,46 @@ class TLSCertificate(Document):
 		if self.has_value_changed("rsa_key_size"):
 			self.obtain_certificate()
 
+	
+	@frappe.whitelist()
+	def load_existing_certificate(self):
+		try:
+			cert_dir = f"/home/arete/.certbot/live/{self.domain}"
+			with open(os.path.join(cert_dir, "cert.pem")) as f:
+				self.certificate = f.read()
+			with open(os.path.join(cert_dir, "fullchain.pem")) as f:
+				self.full_chain = f.read()
+			with open(os.path.join(cert_dir, "chain.pem")) as f:
+				self.intermediate_chain = f.read()
+			with open(os.path.join(cert_dir, "privkey.pem")) as f:
+				self.private_key = f.read()
+
+			# Extract metadata from the cert
+			self._extract_certificate_details()
+
+			self.status = "Active"
+			self.retry_count = 0
+			self.error = None
+			self.save()
+
+			# Trigger normal post-processing
+			self.trigger_site_domain_callback()
+			self.trigger_self_hosted_server_callback()
+			if self.wildcard:
+				self.trigger_server_tls_setup_callback()
+				self._update_secondary_wildcard_domains()
+		except Exception as e:
+			self.status = "Failure"
+			self.error = str(e)
+			self.retry_count += 1
+			self.save()
+			raise
+
+
 	@frappe.whitelist()
 	def obtain_certificate(self):
 		if self.provider != "Let's Encrypt":
 			return
-
 		if self.retry_count >= RETRY_LIMIT:
 			frappe.throw("Retry limit exceeded. Please check the error and try again.", TLSRetryLimitExceeded)
 		(
@@ -95,7 +119,6 @@ class TLSCertificate(Document):
 			frappe.session.data,
 			get_current_team(),
 		)
-
 		frappe.set_user(frappe.get_value("Team", team, "user"))
 		frappe.enqueue_doc(
 			self.doctype,
@@ -213,50 +236,6 @@ class TLSCertificate(Document):
 		self.issued_on = datetime.strptime(x509.get_notBefore().decode(), "%Y%m%d%H%M%SZ")
 		self.expires_on = datetime.strptime(x509.get_notAfter().decode(), "%Y%m%d%H%M%SZ")
 
-	def configure_full_chain(self):
-		if not self.full_chain:
-			self.full_chain = f"{self.certificate}\n{self.intermediate_chain}"
-
-	def _get_private_key_object(self):
-		try:
-			return OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, self.private_key)
-		except OpenSSL.crypto.Error as e:
-			log_error("TLS Private Key Exception", certificate=self.name)
-			raise e
-
-	def _get_certificate_object(self):
-		try:
-			return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, self.full_chain)
-		except OpenSSL.crypto.Error as e:
-			log_error("Custom TLS Certificate Exception", certificate=self.name)
-			raise e
-
-	def validate_key_length(self):
-		private_key = self._get_private_key_object()
-
-		if private_key.bits() != int(self.rsa_key_size):
-			frappe.throw(
-				f"Private key length does not match the selected RSA key size. Expected {self.rsa_key_size} bits, got {private_key.bits()} bits."
-			)
-
-	def validate_key_certificate_association(self):
-		context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
-		context.use_privatekey(self._get_private_key_object())
-		context.use_certificate(self._get_certificate_object())
-
-		try:
-			context.check_privatekey()
-			self.status = "Active"
-			self.retry_count = 0
-			self.error = None
-		except OpenSSL.SSL.Error as e:
-			self.error = repr(e)
-			log_error("TLS Key Certificate Association Exception", certificate=self.name)
-			frappe.throw("Private Key and Certificate do not match")
-		finally:
-			if self.error:
-				self.status = "Failure"
-
 
 get_permission_query_conditions = get_permission_query_conditions_for_doctype("TLS Certificate")
 
@@ -321,9 +300,7 @@ def renew_tls_certificates():
 	for certificate in pending:
 		if tls_renewal_queue_size and (renewals_attempted >= tls_renewal_queue_size):
 			break
-
 		site = frappe.db.get_value("Site Domain", {"tls_certificate": certificate.name}, "site")
-
 		try:
 			if not should_renew(site, certificate):
 				continue
@@ -343,35 +320,6 @@ def renew_tls_certificates():
 			rollback_and_fail_tls(certificate, e)
 			log_error("TLS Renewal Exception", certificate=certificate, site=site)
 			frappe.db.commit()
-
-
-def notify_custom_tls_renewal():
-	seven_days = frappe.utils.add_days(None, 7).date()
-	fifteen_days = frappe.utils.add_days(None, 15).date()
-
-	tls_cert = frappe.qb.DocType("TLS Certificate")
-
-	# Notify team members 15 days and 7 days before expiry
-
-	query = (
-		frappe.qb.from_(tls_cert)
-		.select(tls_cert.name, tls_cert.domain, tls_cert.team, tls_cert.expires_on)
-		.where(tls_cert.status.isin(["Active", "Failure"]))
-		.where((Date(tls_cert.expires_on) == seven_days) | (Date(tls_cert.expires_on) == fifteen_days))
-		.where(tls_cert.provider == "Other")
-	)
-
-	pending = query.run(as_dict=True)
-
-	for certificate in pending:
-		if certificate.team:
-			notify_email = frappe.get_value("Team", certificate.team, "notify_email")
-
-			frappe.sendmail(
-				recipients=notify_email,
-				subject=f"TLS Certificate Renewal Required: {certificate.name}",
-				message=f"TLS Certificate {certificate.name} is due for renewal on {certificate.expires_on}. Please renew the certificate to avoid service disruption.",
-			)
 
 
 def update_server_tls_certifcate(server, certificate):
@@ -484,8 +432,8 @@ class LetsEncrypt(BaseCA):
 			{
 				"AWS_ACCESS_KEY_ID": domain.aws_access_key_id,
 				"AWS_SECRET_ACCESS_KEY": domain.get_password("aws_secret_access_key"),
-			}
-		)
+			} 
+		) if domain.dns_provider != "Generic" else None
 		self.run(self._certbot_command(), environment=environment)
 
 	def _obtain_naked_with_dns(self):

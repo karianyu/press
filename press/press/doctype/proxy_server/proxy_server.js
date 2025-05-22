@@ -130,3 +130,7 @@ frappe.ui.form.on('Proxy Server', {
 		press.set_hostname_abbreviation(frm);
 	},
 });
+
+
+
+

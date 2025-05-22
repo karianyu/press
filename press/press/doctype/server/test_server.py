@@ -34,8 +34,6 @@ def create_test_server(
 	plan: str | None = None,
 	team: str | None = None,
 	public: bool = False,
-	platform: str = "x86_64",
-	use_for_build: bool = False,
 ) -> "Server":
 	"""Create test Server doc."""
 	if not proxy_server:
@@ -61,8 +59,6 @@ def create_test_server(
 			"plan": plan,
 			"public": public,
 			"virtual_machine": create_test_virtual_machine(),
-			"platform": platform,
-			"use_for_build": use_for_build,
 		}
 	).insert()
 	server.reload()

@@ -18,7 +18,7 @@ class DeployCandidateVariable(Document):
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		value: DF.Text
+		value: DF.Data
 	# end: auto-generated types
 
 	pass

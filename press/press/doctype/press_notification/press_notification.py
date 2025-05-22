@@ -64,8 +64,7 @@ class PressNotification(Document):
 			return
 
 		if self.type == "Bench Deploy":
-			recipient = frappe.db.get_value("Team", self.team, "notify_email") or user
-			self.send_bench_deploy_failed(recipient)
+			self.send_bench_deploy_failed(user)
 
 	def send_bench_deploy_failed(self, user: str):
 		group_name = frappe.db.get_value("Deploy Candidate Build", self.document_name, "group")
