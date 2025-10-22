@@ -116,6 +116,17 @@ class VirtualDiskResize(Document):
 		self.save()
 		self.next()
 
+	@frappe.whitelist()
+	def action_enqueue_execute(self):
+		frappe.enqueue_doc(
+			self.doctype,
+			self.name,
+			"execute",
+			queue="long",
+			timeout=2400,
+			enqueue_after_commit=True,
+		)
+
 	def add_steps(self):
 		for step in self.shrink_steps:
 			step.update({"status": StepStatus.Pending})
