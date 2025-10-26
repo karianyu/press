@@ -902,7 +902,7 @@ class Agent:
 			}
 			file_objects["json"] = json.dumps(data).encode()
 			return requests.request(method, url, headers=headers, files=file_objects, verify=verify)
-		return requests.request(method, url, headers=headers, json=data, verify=verify, timeout=(10, 30))
+		return requests.request(method, url, headers=headers, json=data, verify=False, timeout=(10, 30))
 
 	def request(self, method, path, data=None, files=None, agent_job=None, raises=True):
 		self.raise_if_past_requests_have_failed()
@@ -973,7 +973,7 @@ class Agent:
 		password = get_decrypted_password(self.server_type, self.server, "agent_password")
 		headers = {"Authorization": f"bearer {password}"}
 		timeout = timeout or (10, 30)
-		response = requests.request(method, url, headers=headers, json=data, timeout=timeout)
+		response = requests.request(method, url, headers=headers, json=data, timeout=timeout, verify=False)
 		json_response = response.json()
 		if raises:
 			response.raise_for_status()

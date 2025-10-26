@@ -280,6 +280,40 @@ class TLSCertificate(Document):
 			if self.error:
 				self.status = "Failure"
 
+	def load_existing_certificate(self):
+		try:
+			cert_dir = f"/home/arete/.certbot/live/{self.domain}"
+			with open(os.path.join(cert_dir, "cert.pem")) as f:
+				self.certificate = f.read()
+			with open(os.path.join(cert_dir, "fullchain.pem")) as f:
+				self.full_chain = f.read()
+			with open(os.path.join(cert_dir, "chain.pem")) as f:
+				self.intermediate_chain = f.read()
+			with open(os.path.join(cert_dir, "privkey.pem")) as f:
+				self.private_key = f.read()
+
+			# Extract metadata from the cert
+			self._extract_certificate_details()
+
+			self.status = "Active"
+			self.retry_count = 0
+			self.error = None
+			self.save()
+			frappe.db.commit()
+
+			# Trigger normal post-processing
+			self.trigger_site_domain_callback()
+			self.trigger_self_hosted_server_callback()
+			if self.wildcard:
+				self.trigger_server_tls_setup_callback()
+				self._update_secondary_wildcard_domains()
+		except Exception as e:
+			self.status = "Failure"
+			self.error = str(e)
+			self.retry_count += 1
+			self.save()
+			raise
+
 
 get_permission_query_conditions = get_permission_query_conditions_for_doctype("TLS Certificate")
 
@@ -454,6 +488,8 @@ def retrigger_failed_wildcard_tls_callbacks():
 					server=server_doc,
 					certificate=server_doc.get_certificate(),
 				)
+
+
 
 
 class BaseCA:
