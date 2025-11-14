@@ -769,7 +769,7 @@ def get_uptime(site, timezone, timespan, timegrain):
 		"step": f"{timegrain}s",
 	}
 
-	response = requests.get(url, params=query, auth=("frappe", password)).json()
+	response = requests.get(url, params=query, auth=("frappe", password), verify=False).json()
 
 	buckets = []
 	if not response["data"]["result"]:
