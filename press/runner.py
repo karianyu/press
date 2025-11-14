@@ -179,7 +179,7 @@ class Ansible:
 		self.passwords = dict({})
 
 		self.sources = f"{self.host},"
-		self.inventory = InventoryManager(loader=self.loader, sources=self.sources)
+		self.inventory = InventoryManager(loader=self.loader, sources="/home/arete/inventory.ini")
 		self.variable_manager = VariableManager(loader=self.loader, inventory=self.inventory)
 
 		self.callback = AnsibleCallback()

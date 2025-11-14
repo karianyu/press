@@ -611,7 +611,6 @@ def get_cpu_usage(name: str, timezone: str, duration: str = "24h"):
 @redis_cache(ttl=10 * 60)
 def get(name, timezone, duration="7d"):
 	timespan, timegrain = TIMESPAN_TIMEGRAIN_MAP[duration]
-
 	request_data = get_usage(name, "request", timezone, timespan, timegrain)
 	uptime_data = get_uptime(name, timezone, timespan, timegrain)
 
