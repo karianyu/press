@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 	from press.press.doctype.agent_job.agent_job import AgentJob
 	from press.press.doctype.app_patch.app_patch import AgentPatchConfig, AppPatch
+	from press.press.doctype.bench.bench import Bench
 	from press.press.doctype.database_server.database_server import DatabaseServer
 	from press.press.doctype.physical_backup_restoration.physical_backup_restoration import (
 		PhysicalBackupRestoration,
@@ -52,7 +53,7 @@ class Agent:
 		self.server = server
 		self.port = 443 if self.server not in servers_using_alternative_port_for_communication() else 8443
 
-	def new_bench(self, bench):
+	def new_bench(self, bench: "Bench"):
 		settings = frappe.db.get_value(
 			"Press Settings",
 			None,
@@ -1092,7 +1093,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 			filters["bench"] = bench
 
 		if site:
-			filters["site"] = site
+			filters["site"] = site if not isinstance(site, list) else ("IN", site)
 
 		if code_server:
 			filters["code_server"] = code_server
@@ -1103,7 +1104,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 		if host:
 			filters["host"] = host
 
-		job = frappe.db.get_value("Agent Job", filters, "name")
+		job = frappe.db.get_value("Agent Job", filters, "name", debug=1)
 
 		return frappe.get_doc("Agent Job", job) if job else False
 
@@ -1702,9 +1703,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 
 	def add_servers_to_acl(
 		self,
-		primary_server_private_ip: str,
 		secondary_server_private_ip: str,
-		shared_directory: str,
 		reference_doctype: str | None = None,
 		reference_name: str | None = None,
 	) -> AgentJob:
@@ -1712,9 +1711,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 			"Add Servers to ACL",
 			"/nfs/add-to-acl",
 			data={
-				"primary_server_private_ip": primary_server_private_ip,
 				"secondary_server_private_ip": secondary_server_private_ip,
-				"shared_directory": shared_directory,
 			},
 			reference_doctype=reference_doctype,
 			reference_name=reference_name,
@@ -1722,9 +1719,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 
 	def remove_servers_from_acl(
 		self,
-		primary_server_private_ip: str,
 		secondary_server_private_ip: str,
-		shared_directory: str,
 		reference_doctype: str | None = None,
 		reference_name: str | None = None,
 	) -> AgentJob:
@@ -1732,9 +1727,7 @@ Response: {reason or getattr(result, "text", "Unknown")}
 			"Remove Servers from ACL",
 			"/nfs/remove-from-acl",
 			data={
-				"primary_server_private_ip": primary_server_private_ip,
 				"secondary_server_private_ip": secondary_server_private_ip,
-				"shared_directory": shared_directory,
 			},
 			reference_doctype=reference_doctype,
 			reference_name=reference_name,

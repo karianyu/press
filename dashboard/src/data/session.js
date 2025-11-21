@@ -74,6 +74,26 @@ export let session = reactive({
 			? session.roles.data.some((role) => role.allow_partner)
 			: true,
 	),
+	hasPartnerDashboardAccess: computed(() =>
+		session.roles.data.length
+			? session.roles.data.some((role) => role.allow_dashboard)
+			: true,
+	),
+	hasPartnerLeadsAccess: computed(() =>
+		session.roles.data.length
+			? session.roles.data.some((role) => role.allow_leads)
+			: true,
+	),
+	hasPartnerCustomerAccess: computed(() =>
+		session.roles.data.length
+			? session.roles.data.some((role) => role.allow_customer)
+			: true,
+	),
+	hasPartnerContributionAccess: computed(() =>
+		session.roles.data.length
+			? session.roles.data.some((role) => role.allow_contribution)
+			: true,
+	),
 	hasSiteCreationAccess: computed(() =>
 		session.roles.data.length
 			? session.roles.data.some((role) => role.allow_site_creation)
@@ -107,4 +127,25 @@ export function getSessionUser() {
 
 function getSessionCookies() {
 	return new URLSearchParams(document.cookie.split('; ').join('&'));
+}
+
+export let userByName = reactive({});
+export let users = createResource({
+	url: 'press.api.partner.get_users_list',
+	cache: ['users_list'],
+	initialData: [],
+	auto: true,
+	transform(usersArray) {
+		for (const user of usersArray) {
+			userByName[user.name] = user;
+			if (user.name === 'Administrator') {
+				userByName[user.name] = user;
+			}
+		}
+		return usersArray;
+	},
+});
+
+export function getUser(email) {
+	return userByName[email];
 }

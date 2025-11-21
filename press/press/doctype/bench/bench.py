@@ -257,6 +257,16 @@ class Bench(Document):
 				},
 			)
 
+	def build_redis_uri(self, port: int) -> str:
+		"""Get passworded protected redis uri if configured"""
+		set_redis_password = frappe.get_cached_value("Press Settings", None, "set_redis_password")
+
+		if not set_redis_password:
+			return f"redis://localhost:{port}"
+
+		redis_password = frappe.get_cached_doc("Release Group", self.group).get_redis_password()
+		return f"redis://:{redis_password}@localhost:{port}"
+
 	def validate(self):
 		if not self.candidate:
 			candidate = frappe.get_all("Deploy Candidate", filters={"group": self.group})[0]
@@ -270,9 +280,9 @@ class Bench(Document):
 
 		config = {
 			"monitor": True,
-			"redis_cache": "redis://localhost:13000",
-			"redis_queue": "redis://localhost:11000",
-			"redis_socketio": "redis://localhost:13000",
+			"redis_cache": self.build_redis_uri(13000),
+			"redis_queue": self.build_redis_uri(11000),
+			"redis_socketio": self.build_redis_uri(13000),
 			"socketio_port": 9000,
 			"webserver_port": 8000,
 			"restart_supervisor_on_update": True,
@@ -1041,24 +1051,31 @@ class Bench(Document):
 	def check_ongoing_site_updates(self):
 		frappe.db.commit()
 		site_updates = frappe.qb.DocType("Site Update")
+
 		ongoing_site_updates = (
 			frappe.qb.from_(site_updates)
 			.select(site_updates.name)
 			.where((site_updates.source_bench == self.name) | (site_updates.destination_bench == self.name))
+			.where(site_updates.status.isin(["Pending", "Running", "Failure", "Recovering", "Scheduled"]))
+			.limit(1)
+		).run()
+
+		if ongoing_site_updates:
+			frappe.throw("Cannot archive due to ongoing site update.", ArchiveBenchError)
+
+		fatal_site_updates = (
+			frappe.qb.from_(site_updates)
+			.select(site_updates.name)
+			.where((site_updates.source_bench == self.name) | (site_updates.destination_bench == self.name))
 			.where(
-				(site_updates.status.isin(["Pending", "Running", "Failure", "Recovering", "Scheduled"]))
-				| (
-					(site_updates.status == "Fatal")
-					& (
-						site_updates.creation
-						> frappe.utils.add_to_date(None, days=-EMPTY_BENCH_COURTESY_DAYS)
-					)
-				)
+				(site_updates.status == "Fatal")
+				& (site_updates.creation > frappe.utils.add_to_date(None, days=-EMPTY_BENCH_COURTESY_DAYS))
 			)
 			.limit(1)
 		).run()
-		if ongoing_site_updates:
-			frappe.throw("Cannot archive due to ongoing site update.", ArchiveBenchError)
+
+		if fatal_site_updates:
+			frappe.throw("Cannot archive due to recent fatal site update.", ArchiveBenchError)
 
 	def check_unarchived_sites(self):
 		frappe.db.commit()
